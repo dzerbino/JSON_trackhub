@@ -41,7 +41,7 @@ class Blueprint_json_hub(Json_hub):
     '''
 
     index_data    = self._read_file_info(self.index_file, self.exp_key_name)
-    epirr_data    = self._read_file_info(self.epirr_file, self.epirr_key_name)
+    epirr_data    = self._read_file_info(self.epirr_file, self.exp_key_name)
     analysis_data = self._read_file_info(self.analysis_file, self.analysis_key_name)
 
     samples_dict = defaultdict(dict)
@@ -59,14 +59,14 @@ class Blueprint_json_hub(Json_hub):
         file_name = os.path.basename(experiment[self.file_key_name])
         exp_id    = experiment[self.exp_key_name]
 
-        if re.match(r'\.(bb|bw)$',file_name): 
+        if re.search(r'\.(bb|bw)$',file_name): 
           '''
           skip file if its not bigwig or bigbed
           '''           
           exp_meta                 = self._experiment_metadata(experiment)
           analysis_meta            = self._analysis_metadata(analysis_data[file_type][0])
           (browser_dict,type)      = self._file_dict(experiment)
-          exp_meta[epirr_key_name] = epirr_data[exp][0][epirr_key_name]
+          exp_meta[self.epirr_key_name] = epirr_data[exp][0][self.epirr_key_name]
 
           '''
           add IHEC JSON specific dataset information block
