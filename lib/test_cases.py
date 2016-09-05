@@ -51,6 +51,7 @@ class SimpleSampleTestCase(unittest.TestCase):
   def test_sample_metadata(self):
     sample_data = self.sample.get_samples_data() 
     self.assertEqual('Monocyte', sample_data['cell_type'])
+    self.assertEqual('0-5', sample_data['donor_age'])
     self.assertNotIn('cell_line', sample_data)
  
   
