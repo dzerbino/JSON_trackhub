@@ -5,8 +5,8 @@ from collections import defaultdict
 
 class Sample:
   def __init__(self,**data):
+    self.metadata         = data['metadata']
     self.biomaterial_type = data['biomaterial_type']
-    self.metadata_dict    = data['metadata_dict']
   
   def _get_required_attributes(self):
     '''
@@ -52,7 +52,7 @@ class Sample:
     '''
     create sample block for JSON hub
     '''
-    sample_metadata      = self.metadata_dict 
+    sample_metadata      = self.metadata
     required_attributes  = self._get_required_attributes()   
     sample               = dict((k.lower(),v) for k,v in sample_metadata.items() if k.upper() in required_attributes)
 

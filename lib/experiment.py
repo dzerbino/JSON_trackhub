@@ -6,8 +6,8 @@ class Experiment:
     
 
   def _required_experiment_attributes(self):
-    required_attributes = [ 'EXPERIMENT_TYPE','EXPERIMENT_ONTOLOGY_URI','REFERENCE_REGISTRY_ID',
-                            'ASSAY',          'EXPERIMENT_ONTOLOGY_URI' ]
+    required_attributes = [ 'EXPERIMENT_TYPE','EXPERIMENT_ONTOLOGY_URI',
+                            'ASSAY',          'REFERENCE_REGISTRY_ID'   ]
     return required_attributes
  
   def get_experiment_data(self):
