@@ -1,4 +1,6 @@
 language: python
 python:
   - "3.4"
-script: test_command.sh
+script:
+  - export PYTHONPATH=$PYTHONPATH:lib/ 
+  - python3 lib/test_cases.py
