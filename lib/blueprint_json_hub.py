@@ -2,26 +2,30 @@
 
 import os,sys,re
 from collections import defaultdict
-from json_hub import Json_hub
+from json_hub    import Json_hub
+from experiment  import Experiment
+from analysis    import Analysis
+from browser     import Browser
+from sample      import Sample
 
 class Blueprint_json_hub(Json_hub):
   def __init__(self,**data):
  
     '''
-    set default values for Blueprint
+    set Blueprint specific default values
     '''
-    data.setdefault('email', 'blueprint-info@ebi.ac.uk')
-    data.setdefault('taxon_id', 9606)
-    data.setdefault('assembly', 'hg38')
-    data.setdefault('description', 'Blueprint JSON Data hub generated for the IHEC Data Portal.')
+    data.setdefault('taxon_id',         '9606')
+    data.setdefault('assembly',         'hg38')
     data.setdefault('publishing_group', 'Blueprint')
-    data.setdefault('exp_key_name', 'EXPERIMENT_ID')
-    data.setdefault('file_key_name', 'FILE')
-    data.setdefault('sample_key_name', 'SAMPLE_ID')
-    data.setdefault('epirr_key_name', 'EPIRR_ID')
-    data.setdefault('analysis_key_name', 'FILE_TYPE')
-    data.setdefault('file_type_key', 'FILE_TYPE')
-    data.setdefault('url_prefix', 'http://ftp.ebi.ac.uk/pub/databases/')
+    data.setdefault('exp_key_name',     'EXPERIMENT_ID')
+    data.setdefault('file_key_name',    'FILE')
+    data.setdefault('sample_key_name',  'SAMPLE_ID')
+    data.setdefault('epirr_key_name',   'EPIRR_ID')
+    data.setdefault('analysis_key_name','FILE_TYPE')
+    data.setdefault('file_type_key',    'FILE_TYPE')
+    data.setdefault('email',            'blueprint-info@ebi.ac.uk')
+    data.setdefault('url_prefix',       'http://ftp.ebi.ac.uk/pub/databases/')
+    data.setdefault('description',      'Blueprint JSON Data hub generated for the IHEC Data Portal.')
 
     super(self.__class__, self).__init__(**data)
     self.index_file        = data['index_file']
@@ -46,6 +50,7 @@ class Blueprint_json_hub(Json_hub):
 
     samples_dict = defaultdict(dict)
     dataset_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+
     for exp,entries in index_data.items():
       sample_data = self._sample_metadata(entries[0]) 
       sample_id   = entries[0][self.sample_key_name]
@@ -53,19 +58,19 @@ class Blueprint_json_hub(Json_hub):
       add IHEC JSON specific sample information block
       '''
       samples_dict[sample_id] = sample_data  
- 
+
       for experiment in entries:
         file_type = experiment[self.file_type_key]
         file_name = os.path.basename(experiment[self.file_key_name])
         exp_id    = experiment[self.exp_key_name]
-
+ 
         if re.search(r'\.(bb|bw)$',file_name): 
           '''
           skip file if its not bigwig or bigbed
           '''           
-          exp_meta                 = self._experiment_metadata(experiment)
-          analysis_meta            = self._analysis_metadata(analysis_data[file_type][0])
-          (browser_dict,type)      = self._file_dict(experiment)
+          exp_meta                      = self._experiment_metadata(experiment)
+          analysis_meta                 = self._analysis_metadata(analysis_data[file_type][0])
+          (browser_dict,type)           = self._file_dict(experiment)
           exp_meta[self.epirr_key_name] = epirr_data[exp][0][self.epirr_key_name]
 
           '''
@@ -75,7 +80,7 @@ class Blueprint_json_hub(Json_hub):
           dataset_dict[exp_id]['experiment_attributes'] = exp_meta
           dataset_dict[exp_id]['sample_id']             = sample_id     
           dataset_dict[exp_id]['browser'][type].append(browser_dict) 
-
+      
     return (dataset_dict, samples_dict)
   
   def _file_dict(self,experiment):
@@ -96,45 +101,29 @@ class Blueprint_json_hub(Json_hub):
         type='other'
 
     file_url = url_prefix + experiment['FILE']
-    browser_dict = defaultdict(dict)
-    browser_dict['big_data_url']=file_url
-    browser_dict['md5sum']=experiment['FILE_MD5']
-    browser_dict['primary']=True
+   
+    browser = Browser( big_data_url=file_url, md5sum=experiment['FILE_MD5'],primary=True)
+    browser_dict = browser.get_browser_data()
     return browser_dict,type
 
-  def _required_attributes(self,type):
-    donor=[ 'DONOR_ID',       'DONOR_AGE',        'DONOR_HEALTH_STATUS', 'DONOR_SEX',
-            'DONOR_AGE_UNIT', 'DONOR_LIFE_STAGE', 'DONOR_ETHNICITY',
-          ]
-    meta= ['SAMPLE_ONTOLOGY_URI',  'MOLECULE',        'DISEASE', 
-           'DISEASE_ONTOLOGY_URI', 'BIOMATERIAL_TYPE'
-          ]
 
-    required={ 'CELL_LINE' :           ['BIOMATERIAL_TYPE', 'LINE',       'LINEAGE','DIFFERENTIATION_STAGE','MEDIUM','SEX'],
-               'PRIMARY_CELL':         ['BIOMATERIAL_TYPE', 'CELL_TYPE' ],
-               'PRIMARY_TISSUE':       ['BIOMATERIAL_TYPE', 'TISSUE_TYPE','TISSUE_DEPOT'],
-               'PRIMARY_CELL_CULTURE': ['BIOMATERIAL_TYPE', 'CELL_TYPE',  'CULTURE_CONDITIONS']
-             }
-    list=[]
-    if type not in ['CELL_LINE',]:
-      list=required[type]
-      list.extend(donor)
-    else:
-      list=required[type]
-    list.extend(meta)
-    return list
-
-  def _analysis_metadata(self, analysis):
-    required=[ 'ANALYSIS_GROUP',   'ALIGNMENT_SOFTWARE',  'ALIGNMENT_SOFTWARE_VERSION',
-               'ANALYSIS_SOFTWARE','ANALYSIS_SOFTWARE_VERSION' ] 
-    analysis_dict=dict((k.lower(),v) for k,v in analysis.items() if k in required)
+  def _analysis_metadata(self, analysis_data):
+    '''
+    Set analysis attribute for the JSON block
+    '''
+    data={'metadata':analysis_data}
+    analysis = Analysis( **data )
+    analysis_dict = analysis.get_analysis_data()
     return analysis_dict
 
-  def _experiment_metadata(self, experiment):
-    required = [ 'EXPERIMENT_TYPE','EXPERIMENT_ONTOLOGY_URI','REFERENCE_REGISTRY_ID' ]
-    exp_dict = dict((k.lower(),v) for k,v in experiment.items() if k in required)
-    exp_dict['experiment_ontology_uri']='-'
-    exp_dict['assay']=experiment['LIBRARY_STRATEGY']
+  def _experiment_metadata(self, experiment_data):
+    '''
+    Set experiment attribute for JSON block
+    '''
+    experiment_data['assay'] = experiment_data['LIBRARY_STRATEGY']
+    data = {'metadata':experiment_data}
+    experiment = Experiment( **data )
+    exp_dict   = experiment.get_experiment_data() 
     return exp_dict
 
   def _sample_metadata(self, sample):
@@ -142,28 +131,11 @@ class Blueprint_json_hub(Json_hub):
     Set samples metadata block for json hub
     '''
     bio_type=sample['BIOMATERIAL_TYPE']
-    if re.match(r'\bprimary\scell\b', bio_type, re.IGNORECASE):
-      type = 'PRIMARY_CELL'
-    elif re.match(r'\bprimary\stissue\b', bio_type, re.IGNORECASE):
-      type = 'PRIMARY_TISSUE'
-    elif re.match(r'cell\sline', bio_type, re.IGNORECASE):
-      type = 'CELL_LINE'
-    elif re.match(r'\bprimary\scell\sculture\b', bio_type, re.IGNORECASE):
-      type = 'PRIMARY_CELL_CULTURE'
-    else:
-      print('Unknown type: %s' % bio_type)
-      sys.exit(2)
 
-    required    = self._required_attributes(type)
-    sample_dict = dict((k.lower(),v) for k,v in sample.items() if k in required)
-
-    # JSON hub validator doesn't allow space in the donor_age
-    if 'donor_age' in sample_dict:
-      sample_dict['donor_age']=re.sub(r'\s+','',sample_dict['donor_age'])
-
-    # donor_life_stage & donor_age_unit missing for Blueprint samples
-    sample_dict['donor_life_stage'] = 'unknown'
-    sample_dict['donor_age_unit']   = 'year'
+    data = { 'biomaterial_type': sample['BIOMATERIAL_TYPE'],
+             'metadata'        : sample}
+    sample = Sample( **data )
+    sample_dict = sample.get_samples_data()
     return sample_dict
 
   
