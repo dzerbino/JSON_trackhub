@@ -3,4 +3,4 @@ python:
   - "3.4"
 script:
   - export PYTHONPATH=$PYTHONPATH:lib/ 
-  - python3 lib/test_cases.py
+  - python3 t/test_cases.py
