@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 class Experiment:
-  def __init__(self,**data):
-   self.metadata= data['metadata']
+  def __init__(self,metadata):
+   self.metadata= metadata
     
 
   def _required_experiment_attributes(self):

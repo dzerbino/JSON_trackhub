@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 class Analysis:
-  def __init__(self,**data):
-    self.metadata = data['metadata']
+  def __init__(self,metadata):
+    self.metadata = metadata
 
   def get_analysis_data(self):
     required_attributes = self._requited_analysis_metadata()

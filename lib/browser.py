@@ -3,10 +3,10 @@
 from collections import defaultdict
 
 class Browser:
-  def __init__(self,**data):
-    self.primary      = data['primary']
-    self.md5sum       = data['md5sum']
-    self.big_data_url = data['big_data_url']
+  def __init__(self, primary, md5sum, big_data_url ):
+    self.primary      = primary
+    self.md5sum       = md5sum
+    self.big_data_url = big_data_url
  
   def get_browser_data(self):
     '''

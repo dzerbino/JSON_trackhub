@@ -7,6 +7,7 @@ from experiment  import Experiment
 from analysis    import Analysis
 from browser     import Browser
 from sample      import Sample
+from dataset     import Dataset
 
 class Blueprint_json_hub(Json_hub):
   def __init__(self,**data):
@@ -49,8 +50,8 @@ class Blueprint_json_hub(Json_hub):
     analysis_data = self._read_file_info(self.analysis_file, self.analysis_key_name)
 
     samples_dict = defaultdict(dict)
-    dataset_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-
+    #dataset_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+  
     for exp,entries in index_data.items():
       sample_data = self._sample_metadata(entries[0]) 
       sample_id   = entries[0][self.sample_key_name]
@@ -59,28 +60,29 @@ class Blueprint_json_hub(Json_hub):
       '''
       samples_dict[sample_id] = sample_data  
 
+      type_browser_list = []
+      analysis_meta     = None
+      exp_meta          = self._experiment_metadata(entries[0])
+      exp_meta['reference_registry_id'] = epirr_data[exp][0][self.epirr_key_name]
+
       for experiment in entries:
         file_type = experiment[self.file_type_key]
         file_name = os.path.basename(experiment[self.file_key_name])
         exp_id    = experiment[self.exp_key_name]
- 
+  
         if re.search(r'\.(bb|bw)$',file_name): 
           '''
           skip file if its not bigwig or bigbed
           '''           
-          exp_meta                      = self._experiment_metadata(experiment)
-          analysis_meta                 = self._analysis_metadata(analysis_data[file_type][0])
-          (browser_dict,type)           = self._file_dict(experiment)
-          exp_meta[self.epirr_key_name] = epirr_data[exp][0][self.epirr_key_name]
+          analysis_meta       = self._analysis_metadata(analysis_data[file_type][0])
+          (browser_dict,type) = self._file_dict(experiment)
+         
+          type_browser_list.append( { 'type':type, 'browser':browser_dict } )
 
-          '''
-          add IHEC JSON specific dataset information block
-          '''        
-          dataset_dict[exp_id]['analysis_attributes']   = analysis_meta
-          dataset_dict[exp_id]['experiment_attributes'] = exp_meta
-          dataset_dict[exp_id]['sample_id']             = sample_id     
-          dataset_dict[exp_id]['browser'][type].append(browser_dict) 
-      
+      dataset = Dataset(experiment=exp_id, sample_id=sample_id, experiment_attributes=exp_meta,
+                        analysis_attributes=analysis_meta, type_browser_data=type_browser_list)
+      dataset_dict = dataset.get_dataset_block()
+
     return (dataset_dict, samples_dict)
   
   def _file_dict(self,experiment):
@@ -111,8 +113,7 @@ class Blueprint_json_hub(Json_hub):
     '''
     Set analysis attribute for the JSON block
     '''
-    data={'metadata':analysis_data}
-    analysis = Analysis( **data )
+    analysis = Analysis( metadata=analysis_data )
     analysis_dict = analysis.get_analysis_data()
     return analysis_dict
 
@@ -121,8 +122,7 @@ class Blueprint_json_hub(Json_hub):
     Set experiment attribute for JSON block
     '''
     experiment_data['assay'] = experiment_data['LIBRARY_STRATEGY']
-    data = {'metadata':experiment_data}
-    experiment = Experiment( **data )
+    experiment = Experiment( metadata=experiment_data )
     exp_dict   = experiment.get_experiment_data() 
     return exp_dict
 
@@ -130,11 +130,7 @@ class Blueprint_json_hub(Json_hub):
     '''
     Set samples metadata block for json hub
     '''
-    bio_type=sample['BIOMATERIAL_TYPE']
-
-    data = { 'biomaterial_type': sample['BIOMATERIAL_TYPE'],
-             'metadata'        : sample}
-    sample = Sample( **data )
+    sample = Sample( metadata=sample, biomaterial_type=sample['BIOMATERIAL_TYPE'] )
     sample_dict = sample.get_samples_data()
     return sample_dict
 

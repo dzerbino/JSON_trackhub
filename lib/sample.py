@@ -4,9 +4,9 @@ import re
 from collections import defaultdict
 
 class Sample:
-  def __init__(self,**data):
-    self.metadata         = data['metadata']
-    self.biomaterial_type = data['biomaterial_type']
+  def __init__(self,metadata, biomaterial_type):
+    self.metadata         = metadata
+    self.biomaterial_type = biomaterial_type
   
   def _get_required_attributes(self):
     '''
