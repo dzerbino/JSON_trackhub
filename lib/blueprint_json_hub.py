@@ -9,6 +9,23 @@ from browser     import Browser
 from sample      import Sample
 from dataset     import Dataset
 
+def get_file_type(file_name):
+  if file_name.endswith('bw'):
+    primary=False
+    if re.search(r'plusStrand', file_name, re.IGNORECASE):
+      type='signal_forward'
+    elif re.search(r'minusStrand', file_name, re.IGNORECASE):
+      type='signal_reverse'
+    else:
+        type='signal_unstranded'
+  elif file_name.endswith('bb'):
+    primary=True
+    type='peak_calls'
+  else:
+    primary=False
+    type='other'
+  return type, primary
+
 class Blueprint_json_hub(Json_hub):
   def __init__(self,**data):
  
@@ -51,6 +68,8 @@ class Blueprint_json_hub(Json_hub):
 
     samples_dict = defaultdict(dict)
     #dataset_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+
+    exp_ontology_dict={'ChIP-seq':'http://www.ebi.ac.uk/efo/EFO_0002692'}
   
     for exp,entries in index_data.items():
       sample_data = self._sample_metadata(entries[0]) 
@@ -64,6 +83,14 @@ class Blueprint_json_hub(Json_hub):
       analysis_meta     = None
       exp_meta          = self._experiment_metadata(entries[0])
       exp_meta['reference_registry_id'] = epirr_data[exp][0][self.epirr_key_name]
+
+      '''
+      Blueprint experiment metadata doesn't have experiment_ontology_uri
+      '''
+      if exp_meta['assay'] in exp_ontology_dict:
+        exp_meta['experiment_ontology_uri']=exp_ontology_dict[exp_meta['assay']]
+      else:
+        exp_meta['experiment_ontology_uri']='-'
 
       for experiment in entries:
         file_type = experiment[self.file_type_key]
@@ -90,21 +117,11 @@ class Blueprint_json_hub(Json_hub):
     lib_strategy=experiment['LIBRARY_STRATEGY']
     url_prefix=self.url_prefix
 
-    if file_name.endswith('bw'):
-      if re.match(r'plusStrand', file_name, re.IGNORECASE):
-        type='signal_forward'
-      elif re.match(r'minusStrand', file_name, re.IGNORECASE):
-        type='signal_reverse'
-      else:
-        type='signal_unstranded'
-    elif file_name.endswith('bb'):
-        type='peak_calls'
-    else:
-        type='other'
+    (type, primary)=get_file_type(file_name)
 
     file_url = url_prefix + experiment['FILE']
    
-    browser = Browser( big_data_url=file_url, md5sum=experiment['FILE_MD5'],primary=True)
+    browser = Browser( big_data_url=file_url, md5sum=experiment['FILE_MD5'],primary=primary)
     browser_dict = browser.get_browser_data()
     return browser_dict,type
 
@@ -163,4 +180,5 @@ class Blueprint_json_hub(Json_hub):
             print('key %s not found in file %s' % (key_name, index))
             sys.exit(2)
     return data_list
+
 

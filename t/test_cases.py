@@ -6,6 +6,7 @@ from analysis   import Analysis
 from browser    import Browser
 from sample     import Sample
 from dataset    import Dataset
+from blueprint_json_hub import get_file_type 
 
 class SimpleDatasetTestCase(unittest.TestCase):
   def setUp(self):
@@ -70,7 +71,30 @@ class SimpleSampleTestCase(unittest.TestCase):
     self.assertEqual('Monocyte', sample_data['cell_type'])
     self.assertEqual('0-5', sample_data['donor_age'])
     self.assertNotIn('cell_line', sample_data)
- 
-  
+
+class SimpleFileNameTypetest(unittest.TestCase):
+  def test_file_name_type(self):
+    plus_file_name='blueprint/data/homo_sapiens/GRCh38/venous_blood/S01H8C/effector_memory_CD8-positive_alpha-beta_T_cell_terminally_differentiated/RNA-Seq/MPIMG/S01H8C11.plusStrandMulti.star_grape2_crg.GRCh38.20160531.bw'
+    (plus_type, plus_primary)=get_file_type(plus_file_name)
+    self.assertEqual('signal_forward',plus_type) 
+    self.assertFalse(plus_primary)
+    
+    minus_file_name='blueprint/data/homo_sapiens/GRCh38/venous_blood/WR27/T-cell_Prolymphocytic_Leukemia/RNA-Seq/MPIMG/S016KW11.minusStrand.star_grape2_crg.GRCh38.20160531.bw'
+    (minus_type, minus_primary)=get_file_type(minus_file_name)
+    self.assertEqual('signal_reverse',minus_type)
+    self.assertFalse(minus_primary)
+
+    unstranded_file_name='blueprint/data/homo_sapiens/GRCh38/venous_blood/N00031407013221/monocyte_-_None/RNA-Seq/NCMLS/S00UFS11.signalMulti.star_grape2_crg.GRCh38.20150815.bw'
+    (unstranded_type, unstranded_primary)=get_file_type(unstranded_file_name)
+    self.assertEqual('signal_unstranded',unstranded_type)
+    self.assertFalse(unstranded_primary)
+
+    chip_bb_file_name='blueprint/data/homo_sapiens/GRCh38/venous_blood/S004JD/effector_memory_CD8-positive_alpha-beta_T_cell_terminally_differentiated/ChIP-Seq/NCMLS/S004JDH2.ERX406969.H3K36me3.bwa.GRCh38.broad.20150527.bb'
+    (chip_type, chip_primary)=get_file_type(chip_bb_file_name)
+    self.assertEqual('peak_calls', chip_type)
+    self.assertTrue(chip_primary)
+
+
+
 if __name__ == '__main__':
     unittest.main()
