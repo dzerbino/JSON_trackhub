@@ -29,7 +29,7 @@ class Blueprint_json_hub(Json_hub):
     '''
     set Blueprint specific default values
     '''
-    data.setdefault('taxon_id',         '9606')
+    data.setdefault('taxon_id',         9606)
     data.setdefault('assembly',         'hg38')
     data.setdefault('publishing_group', 'Blueprint')
     data.setdefault('exp_key_name',     'EXPERIMENT_ID')
