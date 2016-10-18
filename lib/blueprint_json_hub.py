@@ -11,20 +11,17 @@ from dataset     import Dataset
 
 def get_file_type(file_name):
   if file_name.endswith('bw'):
-    primary=False
     if re.search(r'plusStrand', file_name, re.IGNORECASE):
       type='signal_forward'
     elif re.search(r'minusStrand', file_name, re.IGNORECASE):
       type='signal_reverse'
     else:
-        type='signal_unstranded'
+      type='signal_unstranded'
   elif file_name.endswith('bb'):
-    primary=True
     type='peak_calls'
   else:
-    primary=False
     type='other'
-  return type, primary
+  return type
 
 class Blueprint_json_hub(Json_hub):
   def __init__(self,**data):
@@ -67,7 +64,7 @@ class Blueprint_json_hub(Json_hub):
     analysis_data = self._read_file_info(self.analysis_file, self.analysis_key_name)
 
     samples_dict = defaultdict(dict)
-    #dataset_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    dataset_dict = dict() 
 
     exp_ontology_dict={
      'ChIP-Seq':'http://www.ebi.ac.uk/efo/EFO_0002692',
@@ -77,58 +74,56 @@ class Blueprint_json_hub(Json_hub):
     }
   
     for exp,entries in index_data.items():
-      sample_data = self._sample_metadata(entries[0]) 
-      sample_id   = entries[0][self.sample_key_name]
-      '''
-      add IHEC JSON specific sample information block
-      '''
+      # Remove files that are not bigwig or bigbed
+      filtered_entries = list(filter(lambda entry: re.search(r'\.(bb|bw)$',entry[self.file_key_name]), entries))
+
+      first_entry = filtered_entries[0]
+
+      sample_id   = first_entry[self.sample_key_name]
+      sample_data = self._sample_metadata(first_entry) 
       samples_dict[sample_id] = sample_data  
 
-      type_browser_list = []
-      analysis_meta     = None
-      exp_meta          = self._experiment_metadata(entries[0])
+      exp_meta          = self._experiment_metadata(first_entry)
       exp_meta['reference_registry_id'] = epirr_data[exp][0][self.epirr_key_name]
+      file_type         = first_entry[self.file_type_key]
+      analysis_meta     = self._analysis_metadata(analysis_data[file_type][0])
 
-      '''
-      Blueprint experiment metadata doesn't have experiment_ontology_uri
-      '''
-      if exp_meta['assay'] in exp_ontology_dict:
-        exp_meta['experiment_ontology_uri']=exp_ontology_dict[exp_meta['assay']]
-      else:
-        exp_meta['experiment_ontology_uri']='-'
+      # Blueprint experiment metadata doesn't have experiment_ontology_uri
+      assert exp_meta['assay'] in exp_ontology_dict, print("Failed to find EFO for %s" % exp_meta['assay'])
+      exp_meta['experiment_ontology_uri']=exp_ontology_dict[exp_meta['assay']]
 
-      for experiment in entries:
-        file_type = experiment[self.file_type_key]
-        file_name = os.path.basename(experiment[self.file_key_name])
-        exp_id    = experiment[self.exp_key_name]
-  
-        if re.search(r'\.(bb|bw)$',file_name): 
-          '''
-          skip file if its not bigwig or bigbed
-          '''           
-          analysis_meta       = self._analysis_metadata(analysis_data[file_type][0])
-          (browser_dict,type) = self._file_dict(experiment)
-         
-          type_browser_list.append( { 'type':type, 'browser':browser_dict } )
+      browser_dict = defaultdict(list)
+      for entry in filtered_entries:
+        (track_type, browser_info) = self._file_dict(entry, exp_meta['assay'])
+        browser_dict[track_type].append(browser_info)
 
-      dataset = Dataset(experiment=exp_id, sample_id=sample_id, experiment_attributes=exp_meta,
-                        analysis_attributes=analysis_meta, type_browser_data=type_browser_list)
-      dataset_dict = dataset.get_dataset_block()
+      dataset_dict[exp] = Dataset(sample_id=sample_id, 
+                                  experiment_attributes=exp_meta,
+                                  analysis_attributes=analysis_meta, 
+                                  browser_dict=browser_dict).get_dataset_block()
 
     return (dataset_dict, samples_dict)
   
-  def _file_dict(self,experiment):
-    file_name=os.path.basename(experiment['FILE'])
-    lib_strategy=experiment['LIBRARY_STRATEGY']
+  def _file_dict(self,entry, assay):
+    file_name=os.path.basename(entry['FILE'])
+    lib_strategy=entry['LIBRARY_STRATEGY']
     url_prefix=self.url_prefix
 
-    (type, primary)=get_file_type(file_name)
+    type = get_file_type(file_name)
+    if assay == 'ChIP-Seq' or assay == 'DNase-Hypersensitivity':
+      primary = True
+    elif assay == 'Bisulfite-Seq':
+      primary = ((re.search(r'bs_call', file_name) is not None) and (re.search(r'hypo_meth', file_name) is None))
+    elif assay == 'RNA-Seq':
+      primary = (re.search(r'Multi', file_name) is not None)
+    else:
+      assert False, print("Assay type %s unknown" % assay)
 
-    file_url = url_prefix + experiment['FILE']
+    file_url = url_prefix + entry['FILE']
    
-    browser = Browser( big_data_url=file_url, md5sum=experiment['FILE_MD5'],primary=primary)
+    browser = Browser( big_data_url=file_url, md5sum=entry['FILE_MD5'],primary=primary)
     browser_dict = browser.get_browser_data()
-    return browser_dict,type
+    return type, browser_dict
 
 
   def _analysis_metadata(self, analysis_data):
