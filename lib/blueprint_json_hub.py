@@ -69,7 +69,12 @@ class Blueprint_json_hub(Json_hub):
     samples_dict = defaultdict(dict)
     #dataset_dict = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
 
-    exp_ontology_dict={'ChIP-seq':'http://www.ebi.ac.uk/efo/EFO_0002692'}
+    exp_ontology_dict={
+     'ChIP-Seq':'http://www.ebi.ac.uk/efo/EFO_0002692',
+     'Bisulfite-Seq':'http://www.ebi.ac.uk/efo/EFO_0002761',
+     'DNase-Hypersensitivity':'http://www.ebi.ac.uk/efo/EFO_0002693',
+     'RNA-Seq':'http://www.ebi.ac.uk/efo/EFO_0002770'
+    }
   
     for exp,entries in index_data.items():
       sample_data = self._sample_metadata(entries[0]) 
