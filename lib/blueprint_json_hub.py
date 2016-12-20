@@ -70,12 +70,14 @@ class Blueprint_json_hub(Json_hub):
      'ChIP-Seq':'http://www.ebi.ac.uk/efo/EFO_0002692',
      'Bisulfite-Seq':'http://www.ebi.ac.uk/efo/EFO_0002761',
      'DNase-Hypersensitivity':'http://www.ebi.ac.uk/efo/EFO_0002693',
-     'RNA-Seq':'http://www.ebi.ac.uk/efo/EFO_0002770'
+     'mRNA-Seq':'http://www.ebi.ac.uk/efo/EFO_0002770'
     }
   
     for exp,entries in index_data.items():
       # Remove files that are not bigwig or bigbed
-      filtered_entries = list(filter(lambda entry: re.search(r'\.(bb|bw)$',entry[self.file_key_name]), entries))
+      filtered_entries = list(filter(lambda entry: self.file_key_name in entry and re.search(r'\.(bb|bw)$',entry[self.file_key_name]) is not None, entries))
+      if len(filtered_entries) == 0:
+        continue
 
       first_entry = filtered_entries[0]
 
@@ -84,6 +86,8 @@ class Blueprint_json_hub(Json_hub):
       samples_dict[sample_id] = sample_data  
 
       exp_meta          = self._experiment_metadata(first_entry)
+      if exp not in epirr_data:
+        continue
       exp_meta['reference_registry_id'] = epirr_data[exp][0][self.epirr_key_name]
       file_type         = first_entry[self.file_type_key]
       analysis_meta     = self._analysis_metadata(analysis_data[file_type][0])
@@ -114,7 +118,7 @@ class Blueprint_json_hub(Json_hub):
       primary = True
     elif assay == 'Bisulfite-Seq':
       primary = ((re.search(r'bs_call', file_name) is not None) and (re.search(r'hypo_meth', file_name) is None))
-    elif assay == 'RNA-Seq':
+    elif assay == 'mRNA-Seq':
       primary = (re.search(r'Multi', file_name) is not None)
     else:
       assert False, print("Assay type %s unknown" % assay)
@@ -177,7 +181,7 @@ class Blueprint_json_hub(Json_hub):
         else:
           header=list(map(str.upper, row))
           if key_name not in header:
-            print('key %s not found in file %s' % (key_name, index))
+            print('key %s not found in file %s' % (key_name, infile))
             sys.exit(2)
     return data_list
 
